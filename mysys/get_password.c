@@ -201,7 +201,7 @@ char *get_tty_password(const char *opt_message)
     fputc('\n',stderr);
 #endif /* HAVE_GETPASS */
 
-  DBUG_RETURN(my_strdup(buff,MYF(MY_FAE)));
+  DBUG_RETURN(my_strdup(PSI_INSTRUMENT_ME, buff, MYF(MY_FAE)));
 }
 
 #endif /*__WIN__*/

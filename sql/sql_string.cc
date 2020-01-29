@@ -41,8 +41,8 @@ bool Binary_string::real_alloc(size_t length)
   if (Alloced_length < arg_length)
   {
     free();
-    if (!(Ptr=(char*) my_malloc(arg_length,MYF(MY_WME |
-                                               (thread_specific ?
+    if (!(Ptr=(char*) my_malloc(PSI_INSTRUMENT_ME,
+                                arg_length,MYF(MY_WME | (thread_specific ?
                                                 MY_THREAD_SPECIFIC : 0)))))
       return TRUE;
     DBUG_ASSERT(length < UINT_MAX32);
@@ -92,13 +92,13 @@ bool Binary_string::realloc_raw(size_t alloc_length)
       return TRUE;                                 /* Overflow */
     if (alloced)
     {
-      if (!(new_ptr= (char*) my_realloc(Ptr,len,
+      if (!(new_ptr= (char*) my_realloc(PSI_INSTRUMENT_ME, Ptr,len,
                                         MYF(MY_WME |
                                             (thread_specific ?
                                              MY_THREAD_SPECIFIC : 0)))))
         return TRUE;				// Signal error
     }
-    else if ((new_ptr= (char*) my_malloc(len,
+    else if ((new_ptr= (char*) my_malloc(PSI_INSTRUMENT_ME, len,
                                          MYF(MY_WME |
                                              (thread_specific ?
                                               MY_THREAD_SPECIFIC : 0)))))

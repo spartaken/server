@@ -32,6 +32,10 @@ extern "C"
 #endif
 void myrg_print_wrong_table(const char *table_name);
 
+/* Always defined */
+extern PSI_memory_key rg_key_memory_MYRG_INFO;
+extern PSI_memory_key rg_key_memory_children;
+
 #ifdef HAVE_PSI_INTERFACE
 
 C_MODE_START

@@ -30,6 +30,13 @@
 #include "sql_list.h"
 
 class String;
+#ifdef MYSQL_SERVER
+extern PSI_memory_key key_memory_String_value;
+#define STRING_PSI_MEMORY_KEY key_memory_String_value
+#else
+#define STRING_PSI_MEMORY_KEY PSI_NOT_INSTRUMENTED
+#endif
+
 typedef struct st_io_cache IO_CACHE;
 typedef struct st_mem_root MEM_ROOT;
 
@@ -666,10 +673,8 @@ public:
     if (ALIGN_SIZE(arg_length+1) < Alloced_length)
     {
       char *new_ptr;
-      if (unlikely(!(new_ptr=(char*)
-                     my_realloc(Ptr,
-                                arg_length,MYF((thread_specific ?
-                                                MY_THREAD_SPECIFIC : 0))))))
+      if (!(new_ptr=(char*) my_realloc(STRING_PSI_MEMORY_KEY, Ptr, arg_length,
+                               MYF(thread_specific ? MY_THREAD_SPECIFIC : 0))))
       {
         Alloced_length= 0;
         real_alloc(arg_length);
