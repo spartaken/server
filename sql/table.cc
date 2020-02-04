@@ -43,6 +43,7 @@
 #include "rpl_filter.h"
 #include "sql_cte.h"
 #include "ha_sequence.h"
+//#include "ha_tablefunc.h"
 #include "sql_show.h"
 #include "opt_trace.h"
 
