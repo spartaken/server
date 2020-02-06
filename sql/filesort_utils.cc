@@ -175,7 +175,8 @@ void Filesort_buffer::sort_buffer(const Sort_param *param, uint count)
     reverse_record_pointers();
 
   uchar **buffer= NULL;
-  if (radixsort_is_appliccable(count, param->sort_length) &&
+  if (!param->using_packed_sortkeys() &&
+      radixsort_is_appliccable(count, param->sort_length) &&
       (buffer= (uchar**) my_malloc(count*sizeof(char*),
                                    MYF(MY_THREAD_SPECIFIC))))
   {
@@ -184,5 +185,12 @@ void Filesort_buffer::sort_buffer(const Sort_param *param, uint count)
     return;
   }
   
-  my_qsort2(m_sort_keys, count, sizeof(uchar*), get_ptr_compare(size), &size);
+  qsort2_cmp cmp_func= param->using_packed_sortkeys() ?
+                       get_packed_keys_compare_ptr(size) :
+                       get_ptr_compare(size);
+
+  my_qsort2(m_sort_keys, count, sizeof(uchar*), cmp_func,
+            param->using_packed_sortkeys() ?
+            (void*)param :
+            (void*) &size);
 }

@@ -279,4 +279,8 @@ private:
   longlong m_idx;
 };
 
+int packed_keys_comparison(void *sort_keys,
+                           unsigned char **a, unsigned char **b);
+qsort2_cmp get_packed_keys_compare_ptr(size_t size __attribute__((unused)));
+
 #endif  // FILESORT_UTILS_INCLUDED
