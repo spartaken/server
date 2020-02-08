@@ -9704,9 +9704,7 @@ simple_rename_or_index_change(THD *thd, TABLE_LIST *table_list,
                                          &alter_ctx->new_name);
       for (FK_rename_backup &bak: fk_rename_backup)
       {
-        error= bak.self_ref ?
-          fk_install_shadow_frm(bak.old_name, bak.new_name) :
-          bak.sa.share->fk_install_shadow_frm();
+        error= fk_install_shadow_frm(bak.old_name, bak.new_name);
         if (error)
           break;
       }
@@ -9714,12 +9712,7 @@ simple_rename_or_index_change(THD *thd, TABLE_LIST *table_list,
     else
     {
       for (FK_rename_backup &bak: fk_rename_backup)
-      {
-        if (bak.self_ref)
-          fk_drop_shadow_frm(bak.old_name);
-        else
-          bak.rollback();
-      }
+        bak.rollback();
     }
   }
 
@@ -12702,6 +12695,16 @@ FK_ddl_backup::rollback()
   sa.share->foreign_keys= foreign_keys;
   sa.share->referenced_keys= referenced_keys;
   sa.share->fk_drop_shadow_frm();
+}
+
+
+void
+FK_rename_backup::rollback()
+{
+  if (sa.share)
+    FK_ddl_backup::rollback();
+  else
+    fk_drop_shadow_frm(old_name);
 }
 
 
