@@ -10261,6 +10261,7 @@ do_continue:;
 #ifdef WITH_PARTITION_STORAGE_ENGINE
   if (fast_alter_partition)
   {
+    alter_ctx.fk_release_locks(thd);
     /*
       ALGORITHM and LOCK clauses are generally not allowed by the
       parser for operations related to partitioning.
@@ -12400,6 +12401,10 @@ void Alter_table_ctx::fk_rollback()
 
 void Alter_table_ctx::fk_release_locks(THD* thd)
 {
+  fk_ref_backup.empty();
+  if (fk_table_backup.share)
+    fk_table_backup.rollback();
+
   MDL_request_list::Iterator it(fk_mdl_reqs);
   while (MDL_request *req= it++)
   {

@@ -49,6 +49,7 @@ public:
     DBUG_ASSERT(share);
     share->foreign_keys= foreign_keys;
     share->referenced_keys= referenced_keys;
+    share= NULL;
   }
 };
 
