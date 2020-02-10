@@ -704,6 +704,9 @@ public:
   void commit_checkpoint_notify(void *cookie);
   int recover(LOG_INFO *linfo, const char *last_log_name, IO_CACHE *first_log,
               Format_description_log_event *fdle, bool do_xa);
+  bool recover_explicit_xa_prepare(const char *last_log_name,
+    HASH *recover_xids);
+
   int do_binlog_recovery(const char *opt_name, bool do_xa_recovery);
 #if !defined(MYSQL_CLIENT)
 

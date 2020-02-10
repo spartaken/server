@@ -38,6 +38,7 @@
 #include "log_event.h"          // Query_log_event
 #include "rpl_filter.h"
 #include "rpl_rli.h"
+#include "rpl_mi.h"
 #include "sql_audit.h"
 #include "mysqld.h"
 
@@ -8075,7 +8076,7 @@ MYSQL_BIN_LOG::trx_group_commit_leader(group_commit_entry *leader)
 
     /* Now we have in queue the list of transactions to be committed in order. */
   }
-    
+
   DBUG_ASSERT(is_open());
   if (likely(is_open()))                       // Should always be true
   {
@@ -9764,7 +9765,7 @@ int TC_LOG_MMAP::recover()
         goto err2; // OOM
   }
 
-  if (ha_recover(&xids))
+  if (ha_recover(&xids, 0))
     goto err2;
 
   my_hash_free(&xids);
@@ -9805,7 +9806,7 @@ int TC_LOG::using_heuristic_recover()
     return 0;
 
   sql_print_information("Heuristic crash recovery mode");
-  if (ha_recover(0))
+  if (ha_recover(0, 0))
     sql_print_error("Heuristic crash recovery failed");
   sql_print_information("Please restart mysqld without --tc-heuristic-recover");
   return 1;
@@ -10271,6 +10272,7 @@ int TC_LOG_BINLOG::recover(LOG_INFO *linfo, const char *last_log_name,
 {
   Log_event *ev= NULL;
   HASH xids;
+  HASH prepare_xids;
   MEM_ROOT mem_root;
   char binlog_checkpoint_name[FN_REFLEN];
   bool binlog_checkpoint_found;
@@ -10284,9 +10286,14 @@ int TC_LOG_BINLOG::recover(LOG_INFO *linfo, const char *last_log_name,
   bool last_gtid_valid= false;
 #endif
 
-  if (! fdle->is_valid() ||
-      (do_xa && my_hash_init(&xids, &my_charset_bin, TC_LOG_PAGE_SIZE/3, 0,
-                             sizeof(my_xid), 0, 0, MYF(0))))
+  if (!fdle->is_valid() ||
+      (do_xa &&
+       my_hash_init(&xids, &my_charset_bin, TC_LOG_PAGE_SIZE/3, 0,
+         sizeof(my_xid), 0, 0, MYF(0))))
+    goto err1;
+  if (do_xa &&
+      my_hash_init(&prepare_xids, &my_charset_bin, TC_LOG_PAGE_SIZE/3, 0,
+        sizeof(XID), 0, 0, MYF(0)))
     goto err1;
 
   if (do_xa)
@@ -10371,6 +10378,21 @@ int TC_LOG_BINLOG::recover(LOG_INFO *linfo, const char *last_log_name,
           last_gtid_standalone=
             ((gev->flags2 & Gtid_log_event::FL_STANDALONE) ? true : false);
           last_gtid_valid= true;
+          if (do_xa && gev->flags2 & Gtid_log_event::FL_PREPARED_XA)
+          {
+            // gev->xid has buf = '\245' <repeats 297 times> hence hash_search
+            // fails durng recover. Create a new xid with clean state.
+            XID *x= (XID *) alloc_root(&mem_root, sizeof(XID));
+            if (x)
+            {
+              memset(x,0,sizeof(XID));
+              x->set(&gev->xid);
+              if (my_hash_insert(&prepare_xids,(uchar *) x))
+                goto err2;
+            }
+            else
+              goto err2;
+          }
         }
         break;
 #endif
@@ -10464,11 +10486,14 @@ int TC_LOG_BINLOG::recover(LOG_INFO *linfo, const char *last_log_name,
 
   if (do_xa)
   {
-    if (ha_recover(&xids))
+    if (ha_recover(&xids, &prepare_xids))
       goto err2;
-
+    if (prepare_xids.records &&
+        recover_explicit_xa_prepare(last_log_name, &prepare_xids))
+      goto err2;
     free_root(&mem_root, MYF(0));
     my_hash_free(&xids);
+    my_hash_free(&prepare_xids);
   }
   return 0;
 
@@ -10483,6 +10508,7 @@ err2:
   {
     free_root(&mem_root, MYF(0));
     my_hash_free(&xids);
+    my_hash_free(&prepare_xids);
   }
 err1:
   sql_print_error("Crash recovery failed. Either correct the problem "
@@ -10492,6 +10518,149 @@ err1:
   return 1;
 }
 
+bool MYSQL_BIN_LOG::recover_explicit_xa_prepare(const char *log_name,
+                           HASH *recover_xids)
+{
+
+  bool err= true;
+  Relay_log_info *rli;
+  rpl_group_info *rgi;
+  THD *thd;
+  thd= new THD(next_thread_id());  /* Needed by start_slave_threads */
+  thd->thread_stack= (char*) &thd;
+  thd->store_globals();
+  thd->security_ctx->skip_grants();
+  IO_CACHE log;
+  int error;
+  Format_description_log_event fdle(BINLOG_VERSION);
+  const char *errmsg;
+  File        file;
+  LOG_INFO log_info;
+  bool enable_apply_event= false;
+  Log_event *ev = 0;
+  XID *x = 0;
+  fprintf(stderr,"---------In MYSQL_BIN_LOG::recover_explicit_xa_prepare\n");
+
+  /*
+    option_bits will be changed when applying the event. But we don't expect
+    it be changed permanently after BINLOG statement, so backup it first.
+    It will be restored at the end of this function.
+  */
+  ulonglong thd_options= thd->variables.option_bits;
+  rli= thd->rli_fake;
+  if (!rli && (rli= thd->rli_fake= new Relay_log_info(FALSE)))
+    rli->sql_driver_thd= thd;
+  static LEX_CSTRING connection_name= { STRING_WITH_LEN("recovery") };
+  rli->mi= new Master_info(&connection_name, false);
+  if (!(rgi= thd->rgi_fake))
+    rgi= thd->rgi_fake= new rpl_group_info(rli);
+  rgi->thd= thd;
+  thd->system_thread_info.rpl_sql_info=
+    new rpl_sql_thread_info(rli->mi->rpl_filter);
+
+  /*
+     Out of memory check
+   */
+  if (!(rli))
+  {
+    my_error(ER_OUTOFMEMORY, MYF(ME_FATAL), 1);  /* needed 1 bytes */
+    goto err2;
+  }
+ if (rli && !rli->relay_log.description_event_for_exec)
+  {
+    rli->relay_log.description_event_for_exec=
+      new Format_description_log_event(4);
+  }
+  if (unlikely((error= find_log_pos(&log_info, NullS, 1))))
+  {
+    if (error != LOG_INFO_EOF)
+      sql_print_error("find_log_pos() failed (error: %d)", error);
+    goto err2;
+  }
+
+  if ((file= open_binlog(&log, log_name, &errmsg)) < 0)
+  {
+    sql_print_error("%s", errmsg);
+    goto err2;
+  }
+
+  for (;;)
+  {
+    while ((ev= Log_event::read_log_event(&log,
+            rli->relay_log.description_event_for_exec,
+            opt_master_verify_checksum))
+           && ev->is_valid())
+    {
+      enum Log_event_type typ= ev->get_type_code();
+      ev->thd= thd;
+      if (typ == FORMAT_DESCRIPTION_EVENT || typ == START_EVENT_V3)
+        enable_apply_event= true;
+
+      if (typ == GTID_EVENT)
+      {
+        Gtid_log_event *gev= (Gtid_log_event *)ev;
+        if (gev->flags2 & Gtid_log_event::FL_PREPARED_XA)
+        {
+          // gev->xid has buf = '\245' <repeats 297 times> hence hash_search
+          // fails durng recover. Create a new xid with clean state.
+          x= (XID *)my_malloc(sizeof(XID),MYF(MY_WME));
+          if (x)
+          {
+            memset(x,0,sizeof(XID));
+            x->set(&gev->xid);
+            if (my_hash_search(recover_xids, (uchar *) x, sizeof(XID)))
+              enable_apply_event= true;
+            else
+              my_free(x);
+          }
+          else
+            goto err2;
+        }
+      }
+
+      if (enable_apply_event)
+      {
+        if (typ == XA_PREPARE_LOG_EVENT)
+        {
+          thd->variables.pseudo_slave_mode= TRUE;
+          thd->transaction.xid_state.set_binlogged();
+        }
+        if ((err= ev->apply_event(rgi)))
+        {
+          my_free(x);
+          goto err2;
+        }
+        if (typ == XA_PREPARE_LOG_EVENT)
+        {
+          thd->variables.pseudo_slave_mode= FALSE;
+          my_free(x);
+        }
+      }
+
+      if (typ == FORMAT_DESCRIPTION_EVENT || typ == XID_EVENT)
+        enable_apply_event=false;
+      if (ev->get_type_code() != FORMAT_DESCRIPTION_EVENT)
+        delete ev;
+      ev= 0;
+    }
+    break;
+  }
+  err= false;
+err2:
+  if (file >= 0)
+  {
+    end_io_cache(&log);
+    mysql_file_close(file, MYF(MY_WME));
+  }
+  thd->variables.pseudo_slave_mode= FALSE;
+  thd->variables.option_bits= thd_options;
+  delete rli->mi;
+  delete thd->system_thread_info.rpl_sql_info;
+  rgi->slave_close_thread_tables(thd);
+  thd->reset_globals();
+  delete thd;
+  return err;
+}
 
 int
 MYSQL_BIN_LOG::do_binlog_recovery(const char *opt_name, bool do_xa_recovery)
