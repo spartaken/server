@@ -4781,27 +4781,6 @@ TABLE *find_fk_open_table(THD *thd, const char *db, size_t db_len,
   return NULL;
 }
 
-/* the following three functions are used in background purge threads */
-
-MYSQL_THD create_thd()
-{
-  THD *thd= new THD(next_thread_id());
-  thd->thread_stack= (char*) &thd;
-  thd->store_globals();
-  thd->set_command(COM_DAEMON);
-  thd->system_thread= SYSTEM_THREAD_GENERIC;
-  thd->security_ctx->host_or_ip="";
-  server_threads.insert(thd);
-  return thd;
-}
-
-void destroy_thd(MYSQL_THD thd)
-{
-  thd->add_status_to_global();
-  server_threads.erase(thd);
-  delete thd;
-}
-
 /**
   Create a THD that only has auxilliary functions
   It will never be added to the global connection list
