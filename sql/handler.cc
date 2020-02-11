@@ -2180,10 +2180,11 @@ static my_bool xarecover_handlerton(THD *unused, plugin_ref plugin,
           // prepare_list sent by binlog.
             if (info->prepare_list )
             {
-              uchar *entry= NULL;
-              if ((entry= my_hash_search(info->prepare_list, (uchar *)foreign_xid, sizeof(XID))))
-               if (my_hash_delete(info->prepare_list, (uchar *)entry))
-                 break;
+              struct xa_recovery_member *member= NULL;
+              if ((member= (xa_recovery_member *) my_hash_search(info->prepare_list, (uchar *)foreign_xid, sizeof(XID))))
+              {
+                member->in_engine_prepare= true;
+              }
             }
           continue;
         }

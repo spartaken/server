@@ -25,7 +25,6 @@ SET DEBUG_SYNC="simulate_hang_after_binlog_prepare SIGNAL reached WAIT_FOR go";
 send xa prepare 'xa2';
 
 --connection master2
-SELECT * FROM INFORMATION_SCHEMA.PROCESSLIST;
 let $wait_condition=
   SELECT COUNT(*) = 1 FROM INFORMATION_SCHEMA.PROCESSLIST
     WHERE STATE like "debug sync point: simulate_hang_after_binlog_prepare%";
@@ -91,5 +90,4 @@ SELECT * FROM t;
 --connection master
 DROP TABLE t;
 --sync_slave_with_master
---query_vertical SHOW SLAVE STATUS
 --source include/rpl_end.inc

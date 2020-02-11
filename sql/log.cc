@@ -10272,7 +10272,7 @@ int TC_LOG_BINLOG::recover(LOG_INFO *linfo, const char *last_log_name,
 {
   Log_event *ev= NULL;
   HASH xids;
-  HASH prepare_xids;
+  HASH xa_recover_list;
   MEM_ROOT mem_root;
   char binlog_checkpoint_name[FN_REFLEN];
   bool binlog_checkpoint_found;
@@ -10292,7 +10292,8 @@ int TC_LOG_BINLOG::recover(LOG_INFO *linfo, const char *last_log_name,
          sizeof(my_xid), 0, 0, MYF(0))))
     goto err1;
   if (do_xa &&
-      my_hash_init(&prepare_xids, &my_charset_bin, TC_LOG_PAGE_SIZE/3, 0,
+      my_hash_init(&xa_recover_list, &my_charset_bin, TC_LOG_PAGE_SIZE/3,
+        offsetof(xa_recovery_member,xid),
         sizeof(XID), 0, 0, MYF(0)))
     goto err1;
 
@@ -10382,12 +10383,15 @@ int TC_LOG_BINLOG::recover(LOG_INFO *linfo, const char *last_log_name,
           {
             // gev->xid has buf = '\245' <repeats 297 times> hence hash_search
             // fails durng recover. Create a new xid with clean state.
-            XID *x= (XID *) alloc_root(&mem_root, sizeof(XID));
-            if (x)
+            xa_recovery_member *member= (xa_recovery_member *)
+              alloc_root(&mem_root, sizeof(xa_recovery_member));
+            if (member)
             {
-              memset(x,0,sizeof(XID));
-              x->set(&gev->xid);
-              if (my_hash_insert(&prepare_xids,(uchar *) x))
+              memset(&member->xid,0,sizeof(XID));
+              member->xid.set(&gev->xid);
+              member->state= XA_PREPARE;
+              member->in_engine_prepare= false;
+              if (my_hash_insert(&xa_recover_list,(uchar *) member))
                 goto err2;
             }
             else
@@ -10486,14 +10490,14 @@ int TC_LOG_BINLOG::recover(LOG_INFO *linfo, const char *last_log_name,
 
   if (do_xa)
   {
-    if (ha_recover(&xids, &prepare_xids))
+    if (ha_recover(&xids, &xa_recover_list))
       goto err2;
-    if (prepare_xids.records &&
-        recover_explicit_xa_prepare(last_log_name, &prepare_xids))
+    if (xa_recover_list.records &&
+        recover_explicit_xa_prepare(last_log_name, &xa_recover_list))
       goto err2;
     free_root(&mem_root, MYF(0));
     my_hash_free(&xids);
-    my_hash_free(&prepare_xids);
+    my_hash_free(&xa_recover_list);
   }
   return 0;
 
@@ -10508,7 +10512,7 @@ err2:
   {
     free_root(&mem_root, MYF(0));
     my_hash_free(&xids);
-    my_hash_free(&prepare_xids);
+    my_hash_free(&xa_recover_list);
   }
 err1:
   sql_print_error("Crash recovery failed. Either correct the problem "
@@ -10608,8 +10612,17 @@ bool MYSQL_BIN_LOG::recover_explicit_xa_prepare(const char *log_name,
           {
             memset(x,0,sizeof(XID));
             x->set(&gev->xid);
-            if (my_hash_search(recover_xids, (uchar *) x, sizeof(XID)))
-              enable_apply_event= true;
+            xa_recovery_member *member=NULL;
+            if ((member= (xa_recovery_member *) my_hash_search(recover_xids,
+                      (uchar *) x, sizeof(XID))))
+            {
+              // XA is prepared in binlog and not present in engine then apply
+              if (member->state == XA_PREPARE &&
+                  member->in_engine_prepare == false)
+                enable_apply_event= true;
+              else
+                my_free(x);
+            }
             else
               my_free(x);
           }
