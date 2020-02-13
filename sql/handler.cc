@@ -1811,6 +1811,8 @@ commit_one_phase_2(THD *thd, bool all, THD_TRANS *trans, bool is_real_trans)
         ++count;
       ha_info_next= ha_info->next();
       ha_info->reset(); /* keep it conveniently zero-filled */
+      DBUG_EXECUTE_IF("simulate_crash_after_binlog_commit",
+          DBUG_SUICIDE(););
     }
     trans->ha_list= 0;
     trans->no_2pc=0;
@@ -1924,6 +1926,8 @@ int ha_rollback_trans(THD *thd, bool all)
       status_var_increment(thd->status_var.ha_rollback_count);
       ha_info_next= ha_info->next();
       ha_info->reset(); /* keep it conveniently zero-filled */
+      DBUG_EXECUTE_IF("simulate_crash_after_binlog_rollback",
+          DBUG_SUICIDE(););
     }
     trans->ha_list= 0;
     trans->no_2pc=0;

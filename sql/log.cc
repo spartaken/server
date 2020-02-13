@@ -10379,24 +10379,67 @@ int TC_LOG_BINLOG::recover(LOG_INFO *linfo, const char *last_log_name,
           last_gtid_standalone=
             ((gev->flags2 & Gtid_log_event::FL_STANDALONE) ? true : false);
           last_gtid_valid= true;
-          if (do_xa && gev->flags2 & Gtid_log_event::FL_PREPARED_XA)
+          if (do_xa)
           {
-            // gev->xid has buf = '\245' <repeats 297 times> hence hash_search
-            // fails durng recover. Create a new xid with clean state.
-            xa_recovery_member *member= (xa_recovery_member *)
-              alloc_root(&mem_root, sizeof(xa_recovery_member));
-            if (member)
+            if(gev->flags2 & Gtid_log_event::FL_PREPARED_XA)
             {
-              memset(&member->xid,0,sizeof(XID));
-              member->xid.set(&gev->xid);
-              member->state= XA_PREPARE;
-              member->in_engine_prepare= false;
-              if (my_hash_insert(&xa_recover_list,(uchar *) member))
+              // gev->xid has buf = '\245' <repeats 297 times> hence hash_search
+              // fails durng recover. Create a new xid with clean state.
+              xa_recovery_member *member= (xa_recovery_member *)
+                alloc_root(&mem_root, sizeof(xa_recovery_member));
+              if (member)
+              {
+                memset(&member->xid,0,sizeof(XID));
+                member->xid.set(&gev->xid);
+                member->state= XA_PREPARE;
+                member->in_engine_prepare= false;
+                if (my_hash_insert(&xa_recover_list,(uchar *) member))
+                  goto err2;
+              }
+              else
                 goto err2;
             }
-            else
-              goto err2;
-          }
+            if(gev->flags2 & Gtid_log_event::FL_COMPLETED_XA)
+            {
+              // Extract XID from gev->xid
+              XID *x= (XID *) alloc_root(&mem_root, sizeof(XID));
+              if (x)
+              {
+                memset(x,0,sizeof(XID));
+                x->set(&gev->xid);
+              }
+              else
+                goto err2;
+              //Search if XID is already present in recovery_list.
+              //If found and the state is 'XA_PREPRAED' mark it as
+              //XA_COMPLETE.
+              struct xa_recovery_member *member= NULL;
+              if ((member= (xa_recovery_member *)
+                    my_hash_search(&xa_recover_list, (uchar *)x, sizeof(XID))))
+              {
+                if (member->state == XA_PREPARE)
+                  member->state= XA_COMPLETE;
+              }
+              else // We found only XA COMMIT during recovery insert to list
+              {
+                // gev->xid has buf = '\245' <repeats 297 times> hence hash_search
+                // fails durng recover. Create a new xid with clean state.
+                xa_recovery_member *member= (xa_recovery_member *)
+                  alloc_root(&mem_root, sizeof(xa_recovery_member));
+                if (member)
+                {
+                  memset(&member->xid,0,sizeof(XID));
+                  member->xid.set(&gev->xid);
+                  member->state= XA_COMPLETE;
+                  member->in_engine_prepare= false;
+                  if (my_hash_insert(&xa_recover_list,(uchar *) member))
+                    goto err2;
+                }
+                else
+                  goto err2;
+              }
+            }
+          }//end do_xa
         }
         break;
 #endif
@@ -10535,14 +10578,13 @@ bool MYSQL_BIN_LOG::recover_explicit_xa_prepare(const char *log_name,
   thd->store_globals();
   thd->security_ctx->skip_grants();
   IO_CACHE log;
-  int error;
   Format_description_log_event fdle(BINLOG_VERSION);
   const char *errmsg;
   File        file;
-  LOG_INFO log_info;
   bool enable_apply_event= false;
   Log_event *ev = 0;
   XID *x = 0;
+  uint recover_xa_count= recover_xids->records;
   fprintf(stderr,"---------In MYSQL_BIN_LOG::recover_explicit_xa_prepare\n");
 
   /*
@@ -10561,6 +10603,7 @@ bool MYSQL_BIN_LOG::recover_explicit_xa_prepare(const char *log_name,
   rgi->thd= thd;
   thd->system_thread_info.rpl_sql_info=
     new rpl_sql_thread_info(rli->mi->rpl_filter);
+  xa_recovery_member *member= NULL;
 
   /*
      Out of memory check
@@ -10575,12 +10618,6 @@ bool MYSQL_BIN_LOG::recover_explicit_xa_prepare(const char *log_name,
     rli->relay_log.description_event_for_exec=
       new Format_description_log_event(4);
   }
-  if (unlikely((error= find_log_pos(&log_info, NullS, 1))))
-  {
-    if (error != LOG_INFO_EOF)
-      sql_print_error("find_log_pos() failed (error: %d)", error);
-    goto err2;
-  }
 
   if ((file= open_binlog(&log, log_name, &errmsg)) < 0)
   {
@@ -10590,20 +10627,23 @@ bool MYSQL_BIN_LOG::recover_explicit_xa_prepare(const char *log_name,
 
   for (;;)
   {
-    while ((ev= Log_event::read_log_event(&log,
-            rli->relay_log.description_event_for_exec,
-            opt_master_verify_checksum))
-           && ev->is_valid())
+    while (recover_xa_count &&
+        (ev= Log_event::read_log_event(&log,
+                                       rli->relay_log.description_event_for_exec,
+                                       opt_master_verify_checksum))
+        && ev->is_valid())
     {
       enum Log_event_type typ= ev->get_type_code();
       ev->thd= thd;
+
       if (typ == FORMAT_DESCRIPTION_EVENT || typ == START_EVENT_V3)
         enable_apply_event= true;
 
       if (typ == GTID_EVENT)
       {
         Gtid_log_event *gev= (Gtid_log_event *)ev;
-        if (gev->flags2 & Gtid_log_event::FL_PREPARED_XA)
+        if (gev->flags2 & Gtid_log_event::FL_PREPARED_XA ||
+            gev->flags2 & Gtid_log_event::FL_COMPLETED_XA)
         {
           // gev->xid has buf = '\245' <repeats 297 times> hence hash_search
           // fails durng recover. Create a new xid with clean state.
@@ -10612,22 +10652,39 @@ bool MYSQL_BIN_LOG::recover_explicit_xa_prepare(const char *log_name,
           {
             memset(x,0,sizeof(XID));
             x->set(&gev->xid);
-            xa_recovery_member *member=NULL;
-            if ((member= (xa_recovery_member *) my_hash_search(recover_xids,
-                      (uchar *) x, sizeof(XID))))
+          }
+          else
+            goto err2;
+
+          member=NULL;
+          if ((member= (xa_recovery_member *) my_hash_search(recover_xids,
+                  (uchar *) x, sizeof(XID))))
+          {
+            /* Got XA PREPARE query in binlog but check member->state. If it is
+               marked as XA_PREPARE then this PREPARE has not seen its end
+               COMMIT/ROLLBACK. Check if it exists in engine in prepared state.
+               If so apply.
+             */
+            if (gev->flags2 & Gtid_log_event::FL_PREPARED_XA)
             {
               // XA is prepared in binlog and not present in engine then apply
               if (member->state == XA_PREPARE &&
                   member->in_engine_prepare == false)
                 enable_apply_event= true;
-              else
-                my_free(x);
             }
-            else
+            else if (gev->flags2 & Gtid_log_event::FL_COMPLETED_XA)
+            {
+              if (member->state == XA_COMPLETE &&
+                  member->in_engine_prepare == true)
+                enable_apply_event= true;
+              else
+                --recover_xa_count;
+            }
+            if (!enable_apply_event)
               my_free(x);
           }
           else
-            goto err2;
+            my_free(x);
         }
       }
 
@@ -10638,20 +10695,37 @@ bool MYSQL_BIN_LOG::recover_explicit_xa_prepare(const char *log_name,
           thd->variables.pseudo_slave_mode= TRUE;
           thd->transaction.xid_state.set_binlogged();
         }
+        // For XA_COMMIT and XA_ROLLBACK apply disable binlog temporarily.
+        if (member && member->state == XA_COMPLETE && typ != GTID_EVENT)
+        {
+          thd_options= thd->variables.option_bits;
+          thd->variables.option_bits&= ~OPTION_BIN_LOG;
+          thd->variables.sql_log_bin_off= 1;
+        }
         if ((err= ev->apply_event(rgi)))
         {
           my_free(x);
           goto err2;
+        }
+        if (member && member->state == XA_COMPLETE && typ != GTID_EVENT)
+        {
+          thd->variables.option_bits= thd_options;
+          thd->variables.sql_log_bin_off= 0;
+          --recover_xa_count;
+          my_free (x);
         }
         if (typ == XA_PREPARE_LOG_EVENT)
         {
           thd->variables.pseudo_slave_mode= FALSE;
           my_free(x);
         }
+        if (typ == FORMAT_DESCRIPTION_EVENT || typ == XID_EVENT)
+        {
+          enable_apply_event=false;
+          if (typ == XID_EVENT)
+            --recover_xa_count;
+        }
       }
-
-      if (typ == FORMAT_DESCRIPTION_EVENT || typ == XID_EVENT)
-        enable_apply_event=false;
       if (ev->get_type_code() != FORMAT_DESCRIPTION_EVENT)
         delete ev;
       ev= 0;

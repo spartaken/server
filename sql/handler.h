@@ -522,7 +522,7 @@ enum legacy_db_type
   DB_TYPE_DEFAULT=127 // Must be last
 };
 
-enum xa_binlog_state {XA_PREPARE=0, XA_COMMITTED, XA_ROLLBACK};
+enum xa_binlog_state {XA_PREPARE=0, XA_COMPLETE};
 /*
   Better name for DB_TYPE_UNKNOWN. Should be used for engines that do not have
   a hard-coded type value here.
