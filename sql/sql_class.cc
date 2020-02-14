@@ -4814,6 +4814,7 @@ MYSQL_THD create_background_thd()
   auto thd_mysysvar= pthread_getspecific(THR_KEY_mysys);
   auto thd= new THD(0);
   pthread_setspecific(THR_KEY_mysys, save_mysysvar);
+  thd->set_psi(PSI_CALL_get_thread());
 
   /*
     Workaround the adverse effect of incrementing thread_count
@@ -7772,4 +7773,9 @@ bool THD::timestamp_to_TIME(MYSQL_TIME *ltime, my_time_t ts,
     ltime->second_part= sec_part;
   }
   return 0;
+}
+
+THD_list_iterator *THD_list_iterator::iterator()
+{
+  return &server_threads;
 }
