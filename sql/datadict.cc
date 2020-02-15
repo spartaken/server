@@ -444,7 +444,7 @@ frm_err:
 
   const uchar * const rest_src= frm_src + FRM_HEADER_SIZE + extra2.read_size;
   const size_t rest_size= frm_size - FRM_HEADER_SIZE - extra2.read_size;
-  ulong forminfo_off= uint4korr(rest_src);
+  size_t forminfo_off= uint4korr(rest_src);
 
   foreign_key_io.store(foreign_keys, referenced_keys);
   extra2.foreign_key_info= foreign_key_io.lex_custring();
