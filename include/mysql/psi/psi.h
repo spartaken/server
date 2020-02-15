@@ -23,10 +23,6 @@
 #ifndef MYSQL_PERFORMANCE_SCHEMA_INTERFACE_H
 #define MYSQL_PERFORMANCE_SCHEMA_INTERFACE_H
 
-#ifdef EMBEDDED_LIBRARY
-#define DISABLE_ALL_PSI
-#endif /* EMBEDDED_LIBRARY */
-
 #ifndef MY_GLOBAL_INCLUDED
 /*
   Make sure a .c or .cc file contains an include to my_global.h first.
@@ -783,6 +779,7 @@ enum PSI_socket_operation
 };
 typedef enum PSI_socket_operation PSI_socket_operation;
 
+#endif
 /**
   Instrumented mutex key.
   To instrument a mutex, a mutex key must be obtained using @c register_mutex.
@@ -819,10 +816,7 @@ typedef unsigned int PSI_thread_key;
   To instrument a file, a file key must be obtained using @c register_file.
   Using a zero key always disable the instrumentation.
 */
-#ifndef PSI_FILE_KEY_DEFINED
 typedef unsigned int PSI_file_key;
-#define PSI_FILE_KEY_DEFINED
-#endif
 
 /**
   Instrumented stage key.
@@ -2967,7 +2961,7 @@ typedef struct PSI_sp_locker_state_v2 PSI_sp_locker_state;
 typedef struct PSI_metadata_locker_state_v2 PSI_metadata_locker_state;
 #endif
 
-#else /* HAVE_PSI_INTERFACE */
+#ifndef HAVE_PSI_INTERFACE
 
 /**
   Dummy structure, used to declare PSI_server when no instrumentation
@@ -3004,6 +2998,10 @@ struct PSI_stage_info_none
   with HAVE_PSI_INTERFACE.
 */
 typedef struct PSI_stage_info_none PSI_stage_info;
+typedef struct PSI_stage_info_none PSI_statement_info;
+typedef struct PSI_stage_info_none PSI_sp_locker_state;
+typedef struct PSI_stage_info_none PSI_metadata_locker_state;
+typedef struct PSI_stage_info_none PSI_metadata_locker;
 
 #endif /* HAVE_PSI_INTERFACE */
 
