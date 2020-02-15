@@ -3007,7 +3007,6 @@ typedef struct PSI_stage_info_none PSI_stage_info;
 
 #endif /* HAVE_PSI_INTERFACE */
 
-extern MYSQL_PLUGIN_IMPORT my_bool pfs_enabled;
 extern MYSQL_PLUGIN_IMPORT PSI *PSI_server;
 
 /*

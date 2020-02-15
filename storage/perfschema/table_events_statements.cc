@@ -91,7 +91,7 @@ table_events_statements_current::m_share=
                       "NO_GOOD_INDEX_USED BIGINT unsigned not null,"
                       "NESTING_EVENT_ID BIGINT unsigned,"
                       "NESTING_EVENT_TYPE ENUM('TRANSACTION', 'STATEMENT', 'STAGE', 'WAIT'),"
-                      "NESTING_EVENT_LEVEL INT unsigned)") },
+                      "NESTING_EVENT_LEVEL INT)") },
   false  /* perpetual */
 };
 
@@ -149,7 +149,7 @@ table_events_statements_history::m_share=
                       "NO_GOOD_INDEX_USED BIGINT unsigned not null,"
                       "NESTING_EVENT_ID BIGINT unsigned,"
                       "NESTING_EVENT_TYPE ENUM('TRANSACTION', 'STATEMENT', 'STAGE', 'WAIT'),"
-                      "NESTING_EVENT_LEVEL INT unsigned)") },
+                      "NESTING_EVENT_LEVEL INT)") },
   false  /* perpetual */
 };
 
@@ -207,7 +207,7 @@ table_events_statements_history_long::m_share=
                       "NO_GOOD_INDEX_USED BIGINT unsigned not null,"
                       "NESTING_EVENT_ID BIGINT unsigned,"
                       "NESTING_EVENT_TYPE ENUM('TRANSACTION', 'STATEMENT', 'STAGE', 'WAIT'),"
-                      "NESTING_EVENT_LEVEL INT unsigned)") },
+                      "NESTING_EVENT_LEVEL INT)") },
   false  /* perpetual */
 };
 

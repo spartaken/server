@@ -7950,15 +7950,7 @@ bool check_grant(THD *thd, privilege_t want_access, TABLE_LIST *tables,
       switch(access->check(orig_want_access, &t_ref->grant.privilege))
       {
       case ACL_INTERNAL_ACCESS_GRANTED:
-        /*
-          Currently,
-          -  the information_schema does not subclass ACL_internal_table_access,
-          there are no per table privilege checks for I_S,
-          - the performance schema does use per tables checks, but at most
-          returns 'CHECK_GRANT', and never 'ACCESS_GRANTED'.
-          so this branch is not used.
-        */
-        DBUG_ASSERT(0);
+        continue;
       case ACL_INTERNAL_ACCESS_DENIED:
         goto err;
       case ACL_INTERNAL_ACCESS_CHECK_GRANT:

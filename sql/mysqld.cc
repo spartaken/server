@@ -785,8 +785,8 @@ static struct my_option pfs_early_options[]=
   {"performance_schema_consumer_events_statements_current", 0,
     "Default startup value for the events_statements_current consumer.",
     &pfs_param.m_consumer_events_statements_current_enabled,
-    &pfs_param.m_consumer_events_statements_current_enabled, 0,
-    GET_BOOL, OPT_ARG, TRUE, 0, 0, 0, 0, 0},
+    &pfs_param.m_consumer_events_statements_current_enabled, 0, GET_BOOL,
+    OPT_ARG, FALSE, 0, 0, 0, 0, 0},
   {"performance_schema_consumer_events_statements_history", 0,
     "Default startup value for the events_statements_history consumer.",
     &pfs_param.m_consumer_events_statements_history_enabled,
@@ -796,6 +796,21 @@ static struct my_option pfs_early_options[]=
     "Default startup value for the events_statements_history_long consumer.",
     &pfs_param.m_consumer_events_statements_history_long_enabled,
     &pfs_param.m_consumer_events_statements_history_long_enabled, 0,
+    GET_BOOL, OPT_ARG, FALSE, 0, 0, 0, 0, 0},
+  {"performance_schema_consumer_events_transactions_current", 0,
+    "Default startup value for the events_transactions_current consumer.",
+    &pfs_param.m_consumer_events_transactions_current_enabled,
+    &pfs_param.m_consumer_events_transactions_current_enabled, 0,
+    GET_BOOL, OPT_ARG, FALSE, 0, 0, 0, 0, 0},
+  {"performance_schema_consumer_events_transactions_history", 0,
+    "Default startup value for the events_transactions_history consumer.",
+    &pfs_param.m_consumer_events_transactions_history_enabled,
+    &pfs_param.m_consumer_events_transactions_history_enabled, 0,
+    GET_BOOL, OPT_ARG, FALSE, 0, 0, 0, 0, 0},
+  {"performance_schema_consumer_events_transactions_history_long", 0,
+    "Default startup value for the events_transactions_history_long consumer.",
+    &pfs_param.m_consumer_events_transactions_history_long_enabled,
+    &pfs_param.m_consumer_events_transactions_history_long_enabled, 0,
     GET_BOOL, OPT_ARG, FALSE, 0, 0, 0, 0, 0},
   {"performance_schema_consumer_events_waits_current", 0,
     "Default startup value for the events_waits_current consumer.",
@@ -5346,6 +5361,9 @@ int mysqld_main(int argc, char **argv)
     exit(1);
 
 #ifndef _WIN32
+#ifdef WITH_PERFSCHEMA_STORAGE_ENGINE
+  pre_initialize_performance_schema();
+#endif /*WITH_PERFSCHEMA_STORAGE_ENGINE */
   // For windows, my_init() is called from the win specific mysqld_main
   if (my_init())                 // init my_sys library & pthreads
   {
@@ -5909,6 +5927,10 @@ int mysqld_main(int argc, char **argv)
 
   /* Must be initialized early for comparison of service name */
   system_charset_info= &my_charset_utf8mb3_general_ci;
+
+#ifdef WITH_PERFSCHEMA_STORAGE_ENGINE
+  pre_initialize_performance_schema();
+#endif /*WITH_PERFSCHEMA_STORAGE_ENGINE */
 
   if (my_init())
   {
@@ -9080,6 +9102,11 @@ static void delete_pid_file(myf flags)
 void refresh_status(THD *thd)
 {
   mysql_mutex_lock(&LOCK_status);
+
+#ifdef WITH_PERFSCHEMA_STORAGE_ENGINE
+  /* Reset aggregated status counters. */
+  reset_pfs_status_stats();
+#endif
 
   /* Add thread's status variabes to global status */
   add_to_status(&global_status_var, &thd->status_var);

@@ -114,7 +114,7 @@ int table_replication_applier_status_by_coordinator::rnd_next(void)
     {
       make_row(mi);
       m_next_pos.set_after(&m_pos);
-      channel_map.unlock();
+      mysql_mutex_unlock(&LOCK_active_mi);
       return 0;
     }
   }
