@@ -1236,3 +1236,25 @@ bool String::append_semi_hex(const char *s, uint len, CHARSET_INFO *cs)
   str_length+= nbytes;
   return false;
 }
+
+// Shrink the buffer, but only if it is allocated on the heap.
+void Binary_string::shrink(size_t arg_length)
+{
+    if (!is_alloced())
+        return;
+    if (ALIGN_SIZE(arg_length + 1) < Alloced_length)
+    {
+        char* new_ptr;
+        if (!(new_ptr = (char*)my_realloc(STRING_PSI_MEMORY_KEY, Ptr, arg_length,
+            MYF(thread_specific ? MY_THREAD_SPECIFIC : 0))))
+        {
+            Alloced_length = 0;
+            real_alloc(arg_length);
+        }
+        else
+        {
+            Ptr = new_ptr;
+            Alloced_length = (uint32)arg_length;
+        }
+    }
+}

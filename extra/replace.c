@@ -298,7 +298,7 @@ static int insert_pointer_name(reg1 POINTER_ARRAY *pa,char * name)
     int len;
     pa->array_allocs++;
     len=(PC_MALLOC*pa->array_allocs - MALLOC_OVERHEAD);
-    if (!(new_array=(const char **) my_realloc(PSI_NOT_INSTRUMENTED, pa->typelib.type_names,
+    if (!(new_array=(const char **) my_realloc(PSI_NOT_INSTRUMENTED, (void*)(pa->typelib.type_names),
 					       (uint) len/
 					 (sizeof(uchar*)+sizeof(*pa->flag))*
 					 (sizeof(uchar*)+sizeof(*pa->flag)),

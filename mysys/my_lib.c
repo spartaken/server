@@ -228,15 +228,15 @@ MY_DIR	*my_dir(const char *path, myf MyFlags)
   tmp_file[2]='*';
   tmp_file[3]='\0';
 
-  if (!(dirh= my_malloc(sizeof(*dirh), MyFlags | MY_ZEROFILL)))
+  if (!(dirh= my_malloc(PSI_INSTRUMENT_ME, sizeof(*dirh), MyFlags | MY_ZEROFILL)))
     goto error;
   
-  if (my_init_dynamic_array(&dirh->array, sizeof(FILEINFO),
+  if (my_init_dynamic_array(&dirh->array, PSI_INSTRUMENT_ME, sizeof(FILEINFO),
                             ENTRIES_START_SIZE, ENTRIES_INCREMENT,
                             MYF(MyFlags)))
     goto error;
 
-  init_alloc_root(&dirh->root, "dir", NAMES_START_SIZE, NAMES_START_SIZE,
+  init_alloc_root(PSI_INSTRUMENT_ME, &dirh->root, NAMES_START_SIZE, NAMES_START_SIZE,
                   MYF(MyFlags));
 
   if ((handle=_findfirst(tmp_path,&find)) == -1L)

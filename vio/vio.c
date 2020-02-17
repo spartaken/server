@@ -270,7 +270,7 @@ Vio *vio_new_win32pipe(HANDLE hPipe)
 {
   Vio *vio;
   DBUG_ENTER("vio_new_handle");
-  if ((vio = (Vio*) my_malloc(sizeof(Vio),MYF(MY_WME))))
+  if ((vio = (Vio*) my_malloc(PSI_INSTRUMENT_ME, sizeof(Vio),MYF(MY_WME))))
   {
     vio_init(vio, VIO_TYPE_NAMEDPIPE, 0, VIO_LOCALHOST);
     vio->desc= "named pipe";

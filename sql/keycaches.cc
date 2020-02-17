@@ -23,7 +23,8 @@
 NAMED_ILIST key_caches;
 NAMED_ILIST rpl_filters;
 
-extern PSI_memory_key key_memory_NAMED_ILINK_name, key_memory_KEY_CACHE;
+extern "C" PSI_memory_key key_memory_KEY_CACHE;
+extern PSI_memory_key key_memory_NAMED_ILINK_name;
 
 /**
   ilink (intrusive list element) with a name

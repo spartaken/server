@@ -7426,7 +7426,7 @@ void init_win_path_patterns()
 
   DBUG_ENTER("init_win_path_patterns");
 
-  my_init_dynamic_array(&patterns, sizeof(const char*), 16, 16, MYF(0));
+  my_init_dynamic_array(&patterns, PSI_NOT_INSTRUMENTED, sizeof(const char*), 16, 16, MYF(0));
 
   /* Loop through all paths in the array */
   for (i= 0; i < num_paths; i++)

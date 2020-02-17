@@ -2753,7 +2753,7 @@ size_t Query_cache::init_cache()
                       lower_case_table_names ? &my_charset_bin :
                       files_charset_info,
                       def_table_hash_size, 0, 0,query_cache_table_get_key,
-                      0, 0);
+                      0, 0, PSI_INSTRUMENT_ME);
 #endif
 
   queries_in_cache = 0;

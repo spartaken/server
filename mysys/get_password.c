@@ -90,7 +90,7 @@ char *get_tty_password(const char *opt_message)
     pos--;					/* Allow dummy space at end */
   *pos=0;
   _cputs("\n");
-  DBUG_RETURN(my_strdup(to,MYF(MY_FAE)));
+  DBUG_RETURN(my_strdup(PSI_INSTRUMENT_ME, to,MYF(MY_FAE)));
 }
 
 #else
