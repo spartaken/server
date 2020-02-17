@@ -285,11 +285,11 @@ ORDER BY variable_name;
 --echo
 FLUSH STATUS;
 --echo
-SELECT * FROM status_by_account WHERE user LIKE 'user%' AND variable_name IN ('handler_delete');
+SELECT * FROM status_by_account WHERE user IN ('user1', 'user2', 'user3') AND variable_name IN ('handler_delete');
 --echo
 SELECT * FROM status_by_host WHERE host IN ('localhost') AND variable_name IN ('handler_delete');
 --echo
-SELECT * FROM status_by_user WHERE user LIKE 'user%' AND variable_name IN ('handler_delete');
+SELECT * FROM status_by_user WHERE user IN ('user1', 'user2', 'user3') AND variable_name IN ('handler_delete');
 
 
 --echo ================================================================================

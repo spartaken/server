@@ -502,7 +502,7 @@ TEST 8: FLUSH STATUS should clear account, host and user status
 
 FLUSH STATUS;
 
-SELECT * FROM status_by_account WHERE user LIKE 'user%' AND variable_name IN ('handler_delete');
+SELECT * FROM status_by_account WHERE user IN ('user1', 'user2', 'user3') AND variable_name IN ('handler_delete');
 USER	HOST	VARIABLE_NAME	VARIABLE_VALUE
 user1	localhost	Handler_delete	0
 user2	localhost	Handler_delete	0
@@ -512,7 +512,7 @@ SELECT * FROM status_by_host WHERE host IN ('localhost') AND variable_name IN ('
 HOST	VARIABLE_NAME	VARIABLE_VALUE
 localhost	Handler_delete	0
 
-SELECT * FROM status_by_user WHERE user LIKE 'user%' AND variable_name IN ('handler_delete');
+SELECT * FROM status_by_user WHERE user IN ('user1', 'user2', 'user3') AND variable_name IN ('handler_delete');
 USER	VARIABLE_NAME	VARIABLE_VALUE
 user1	Handler_delete	0
 user2	Handler_delete	0
