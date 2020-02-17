@@ -353,7 +353,7 @@ enum enum_mdl_duration {
   or "name".
 */
 
-class MDL_key
+struct MDL_key
 {
 public:
 #ifdef HAVE_PSI_INTERFACE
