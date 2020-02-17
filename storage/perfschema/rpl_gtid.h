@@ -1,7 +1,7 @@
 #ifndef STORAGE_PERFSCHEMA_RPL_GTID_INCLUDED
 #define STORAGE_PERFSCHEMA_RPL_GTID_INCLUDED
 
-class TABLE;
+struct TABLE;
 
 #include "../../sql/rpl_gtid.h"
 
