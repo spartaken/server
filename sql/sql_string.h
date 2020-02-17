@@ -666,26 +666,8 @@ public:
     return realloc_with_extra(arg_length);
   }
   // Shrink the buffer, but only if it is allocated on the heap.
-  inline void shrink(size_t arg_length)
-  {
-    if (!is_alloced())
-      return;
-    if (ALIGN_SIZE(arg_length+1) < Alloced_length)
-    {
-      char *new_ptr;
-      if (!(new_ptr=(char*) my_realloc(STRING_PSI_MEMORY_KEY, Ptr, arg_length,
-                               MYF(thread_specific ? MY_THREAD_SPECIFIC : 0))))
-      {
-        Alloced_length= 0;
-        real_alloc(arg_length);
-      }
-      else
-      {
-        Ptr= new_ptr;
-        Alloced_length= (uint32) arg_length;
-      }
-    }
-  }
+  void shrink(size_t arg_length);
+
   void move(Binary_string &s)
   {
     set_alloced(s.Ptr, s.str_length, s.Alloced_length);
