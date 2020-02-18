@@ -88,7 +88,9 @@ void init_sp_psi_keys()
 
   DBUG_ASSERT(SP_PSI_STATEMENT_INFO_COUNT == __LINE__ - num);
 }
+#endif
 
+#ifdef HAVE_PSI_SP_INTERFACE
 #define MYSQL_RUN_SP(SP,CODE)                                           \
   do {                                                                  \
        PSI_sp_locker_state psi_state;                                   \
