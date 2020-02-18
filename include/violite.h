@@ -187,7 +187,7 @@ void free_vio_ssl_acceptor_fd(struct st_VioSSLFd *fd);
 
 void vio_end(void);
 
-const char *vio_type_name(enum enum_vio_type vio_type, int *len);
+const char *vio_type_name(enum enum_vio_type vio_type, size_t *len);
 
 #ifdef	__cplusplus
 }

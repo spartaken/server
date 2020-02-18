@@ -70,7 +70,7 @@ const uint max_dbname_length= 64;
 
 const char *safe_vio_type_name(Vio *vio)
 {
-  int unused;
+  size_t unused;
 #ifdef EMBEDDED_LIBRARY
   if (!vio) return "Internal";
 #endif

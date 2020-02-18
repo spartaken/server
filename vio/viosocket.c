@@ -655,7 +655,7 @@ static const LEX_CSTRING vio_type_names[] =
   { STRING_WITH_LEN("Shared Memory") }
 };
 
-const char *vio_type_name(enum enum_vio_type vio_type, int *len)
+const char *vio_type_name(enum enum_vio_type vio_type, size_t *len)
 {
   int index= vio_type >= FIRST_VIO_TYPE && vio_type <= LAST_VIO_TYPE
              ?  vio_type : 0;
