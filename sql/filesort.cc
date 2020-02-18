@@ -2523,6 +2523,9 @@ SORT_INFO::~SORT_INFO()
 
 void Sort_param::try_to_pack_sortkeys()
 {
+  #ifdef WITHOUT_PACKED_SORT_KEYS
+    return;
+  #endif
   if (using_packed_sortkeys())
     return;
 
