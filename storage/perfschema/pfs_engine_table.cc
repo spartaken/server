@@ -310,6 +310,7 @@ static PFS_engine_table_share *all_shares[]=
   &table_table_handles::m_share,
   &table_metadata_locks::m_share,
 
+#ifdef HAVE_REPLICATION
   &table_replication_connection_configuration::m_share,
   //&table_replication_group_members::m_share,
   //&table_replication_connection_status::m_share,
@@ -318,6 +319,7 @@ static PFS_engine_table_share *all_shares[]=
   &table_replication_applier_status_by_coordinator::m_share,
   //&table_replication_applier_status_by_worker::m_share,
   //&table_replication_group_member_stats::m_share,
+#endif
 
   &table_prepared_stmt_instances::m_share,
 

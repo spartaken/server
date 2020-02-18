@@ -26,7 +26,7 @@
   Table replication_applier_configuration (implementation).
 */
 
-#define HAVE_REPLICATION
+//#define HAVE_REPLICATION
 
 #include "my_global.h"
 #include "table_replication_applier_configuration.h"
@@ -39,6 +39,7 @@
 #include "sql_parse.h"
 //#include "rpl_msr.h"   /* Multisource replication */
 
+#ifdef HAVE_REPLICATION
 THR_LOCK table_replication_applier_configuration::m_table_lock;
 
 PFS_engine_table_share
@@ -190,3 +191,4 @@ int table_replication_applier_configuration::read_row_values(TABLE *table,
   }
   return 0;
 }
+#endif

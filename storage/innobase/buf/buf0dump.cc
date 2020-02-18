@@ -643,7 +643,7 @@ buf_load()
 	fil_space_t*	space = fil_space_acquire_silent(cur_space_id);
 	ulint		zip_size = space ? space->zip_size() : 0;
 
-	PSI_stage_progress*	pfs_stage_progress
+	PSI_stage_progress*	pfs_stage_progress __attribute__((unused))
 		= mysql_set_stage(srv_stage_buffer_pool_load.m_key);
 	mysql_stage_set_work_estimated(pfs_stage_progress, dump_n);
 	mysql_stage_set_work_completed(pfs_stage_progress, 0);

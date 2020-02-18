@@ -26,9 +26,11 @@
   Table replication_applier_status (implementation).
 */
 
-#define HAVE_REPLICATION
+//#define HAVE_REPLICATION
 
 #include "my_global.h"
+
+#ifdef HAVE_REPLICATION
 #include "table_replication_applier_status.h"
 #include "pfs_instr_class.h"
 #include "pfs_instr.h"
@@ -217,3 +219,4 @@ int table_replication_applier_status::read_row_values(TABLE *table,
   }
   return 0;
 }
+#endif
