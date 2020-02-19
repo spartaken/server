@@ -428,6 +428,7 @@ public:
   {
     m_allocator= allocator;
     m_initialized= false;
+    m_lost= 0;
   }
 
   int init(long max_size)
@@ -439,7 +440,6 @@ public:
     m_max= PFS_PAGE_COUNT * PFS_PAGE_SIZE;
     m_max_page_count= PFS_PAGE_COUNT;
     m_last_page_size= PFS_PAGE_SIZE;
-    m_lost= 0;
     m_monotonic.m_u32= 0;
     m_max_page_index.m_u32= 0;
 
