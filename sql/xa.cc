@@ -589,55 +589,52 @@ bool trans_xa_commit(THD *thd)
   if (!xid_state.is_explicit_XA() ||
       !xid_state.xid_cache_element->xid.eq(thd->lex->xid))
   {
+    if (thd->in_multi_stmt_transaction_mode())
+    {
+      my_error(ER_XAER_NOTA, MYF(0));
+      DBUG_RETURN(TRUE);
+    }
     if (thd->fix_xid_hash_pins())
     {
       my_error(ER_OUT_OF_RESOURCES, MYF(0));
       DBUG_RETURN(TRUE);
     }
-
     if (auto xs= xid_cache_search(thd, thd->lex->xid))
     {
-      if (thd->in_multi_stmt_transaction_mode())
+      res= xa_trans_rolled_back(xs);
+      /*
+        Acquire metadata lock which will ensure that COMMIT is blocked
+        by active FLUSH TABLES WITH READ LOCK (and vice versa COMMIT in
+        progress blocks FTWRL).
+
+        We allow FLUSHer to COMMIT; we assume FLUSHer knows what it does.
+      */
+      MDL_request mdl_request;
+      mdl_request.init(MDL_key::BACKUP, "", "", MDL_BACKUP_COMMIT,
+                       MDL_STATEMENT);
+      if (thd->mdl_context.acquire_lock(&mdl_request,
+                                        thd->variables.lock_wait_timeout))
       {
-        xid_state.er_xaer_rmfail();
-      }
-      else
-      {
-        res= xa_trans_rolled_back(xs);
         /*
-          Acquire metadata lock which will ensure that COMMIT is blocked
-          by active FLUSH TABLES WITH READ LOCK (and vice versa COMMIT in
-          progress blocks FTWRL).
-
-          We allow FLUSHer to COMMIT; we assume FLUSHer knows what it does.
+          We can't rollback an XA transaction on lock failure due to
+          Innodb redo log and bin log update is involved in rollback.
+          Return error to user for a retry.
         */
-        MDL_request mdl_request;
-        mdl_request.init(MDL_key::BACKUP, "", "", MDL_BACKUP_COMMIT,
-                         MDL_STATEMENT);
-        if (thd->mdl_context.acquire_lock(&mdl_request,
-                                          thd->variables.lock_wait_timeout))
-        {
-          /*
-            We can't rollback an XA transaction on lock failure due to
-            Innodb redo log and bin log update is involved in rollback.
-            Return error to user for a retry.
-          */
-          xid_state.er_xaer_rmfail();
-          DBUG_RETURN(res);
-        }
-        DBUG_ASSERT(!xid_state.xid_cache_element);
-
-        DEBUG_SYNC(thd, "at_trans_xa_commit");
-        if ((res= thd->wait_for_prior_commit()))
-          DBUG_RETURN(res);
-
-        xid_state.xid_cache_element= xs;
-        ha_commit_or_rollback_by_xid(thd->lex->xid, !res);
-        xid_state.xid_cache_element= 0;
-
-        res= res || thd->is_error();
-        xid_cache_delete(thd, xs);
+        xid_state.er_xaer_rmfail();
+        DBUG_RETURN(res);
       }
+      DBUG_ASSERT(!xid_state.xid_cache_element);
+
+      DEBUG_SYNC(thd, "at_trans_xa_commit");
+      if ((res= thd->wait_for_prior_commit()))
+        DBUG_RETURN(res);
+
+      xid_state.xid_cache_element= xs;
+      ha_commit_or_rollback_by_xid(thd->lex->xid, !res);
+      xid_state.xid_cache_element= 0;
+
+      res= res || thd->is_error();
+      xid_cache_delete(thd, xs);
     }
     else
       my_error(ER_XAER_NOTA, MYF(0));
@@ -729,6 +726,11 @@ bool trans_xa_rollback(THD *thd)
   if (!xid_state.is_explicit_XA() ||
       !xid_state.xid_cache_element->xid.eq(thd->lex->xid))
   {
+    if (thd->in_multi_stmt_transaction_mode())
+    {
+      my_error(ER_XAER_NOTA, MYF(0));
+      DBUG_RETURN(TRUE);
+    }
     if (thd->fix_xid_hash_pins())
     {
       my_error(ER_OUT_OF_RESOURCES, MYF(0));
@@ -765,6 +767,7 @@ bool trans_xa_rollback(THD *thd)
     }
     else
       my_error(ER_XAER_NOTA, MYF(0));
+
     DBUG_RETURN(thd->get_stmt_da()->is_error());
   }
 
