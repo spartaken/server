@@ -504,14 +504,13 @@ Filesort::make_sortorder(THD *thd, JOIN *join, table_map first_table_bit)
     count++;
   if (!sortorder)
     sortorder= (SORT_FIELD*) thd->alloc(sizeof(SORT_FIELD) * count);
-  void *rawmem= thd->alloc(sizeof(Sort_keys));
   pos= sort= sortorder;
 
   if (!pos)
     DBUG_RETURN(0);
 
   Sort_keys_array sort_keys_array(sortorder, count);
-  Sort_keys* sort_keys= new (rawmem) Sort_keys(sort_keys_array);
+  Sort_keys* sort_keys= new Sort_keys(sort_keys_array);
 
   if (!sort_keys)
     DBUG_RETURN(0);
@@ -2222,6 +2221,7 @@ sortlength(THD *thd, Sort_keys *sort_keys, bool *multi_byte_charset,
   uint length;
   *multi_byte_charset= 0;
   *allow_packing_for_sortkeys= true;
+  bool allow_packing_for_keys= true;
 
   length=0;
   uint nullable_cols=0;
@@ -2245,10 +2245,9 @@ sortlength(THD *thd, Sort_keys *sort_keys, bool *multi_byte_charset,
         *multi_byte_charset= true;
         sortorder->length= (uint) cs->strnxfrmlen(sortorder->length);
       }
-      if (field->is_packable())
+      if (field->is_packable() && allow_packing_for_keys)
       {
-        *allow_packing_for_sortkeys= check_if_packing_possible(thd, cs,
-                                                               sortorder);
+        allow_packing_for_keys= check_if_packing_possible(thd, cs, sortorder);
         sortorder->length_bytes=
           number_storage_requirement(MY_MIN(sortorder->original_length,
                                             thd->variables.max_sort_length));
@@ -2266,10 +2265,10 @@ sortlength(THD *thd, Sort_keys *sort_keys, bool *multi_byte_charset,
       {
         *multi_byte_charset= true;
       }
-      if (sortorder->item->type_handler()->is_packable())
+      if (sortorder->item->type_handler()->is_packable() &&
+          allow_packing_for_keys)
       {
-        *allow_packing_for_sortkeys= check_if_packing_possible(thd, cs,
-                                                               sortorder);
+        allow_packing_for_keys= check_if_packing_possible(thd, cs, sortorder);
         sortorder->length_bytes=
           number_storage_requirement(MY_MIN(sortorder->original_length,
                                             thd->variables.max_sort_length));
@@ -2287,6 +2286,7 @@ sortlength(THD *thd, Sort_keys *sort_keys, bool *multi_byte_charset,
   }
   // add bytes for nullable_cols
   sort_keys->increment_original_sort_length(nullable_cols);
+  *allow_packing_for_sortkeys= allow_packing_for_keys;
   DBUG_PRINT("info",("sort_length: %d",length));
   return length+nullable_cols;
 }
@@ -2812,7 +2812,7 @@ bool check_if_packing_possible(THD *thd, CHARSET_INFO *cs,
 
 qsort2_cmp get_packed_keys_compare_ptr(size_t size __attribute__((unused)))
 {
-  return (qsort2_cmp) packed_keys_comparison;
+  return (qsort2_cmp) compare_packed_keys;
 }
 
 
@@ -2916,8 +2916,8 @@ int compare_packed_sort_keys(uchar *a, size_t *a_len,
 
 */
 
-int packed_keys_comparison(void *sort_param,
-                           unsigned char **a_ptr, unsigned char **b_ptr)
+int compare_packed_keys(void *sort_param,
+                        unsigned char **a_ptr, unsigned char **b_ptr)
 {
   int retval= 0;
   size_t a_len, b_len;

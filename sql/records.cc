@@ -789,8 +789,6 @@ static int rr_cmp(uchar *a,uchar *b)
     The function is supposed to be used only as a callback function
     when getting field values for the sorted result set.
 
-  @return
-    void.
 */
 template<bool Packed_addon_fields>
 inline void SORT_INFO::unpack_addon_fields(uchar *buff)

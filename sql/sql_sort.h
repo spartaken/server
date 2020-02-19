@@ -250,7 +250,7 @@ private:
   @see SORT_FIELD struct.
 */
 
-class Sort_keys
+class Sort_keys :public Sql_alloc
 {
 public:
   Sort_keys(Sort_keys_array arr):
