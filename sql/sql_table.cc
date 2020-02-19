@@ -8138,24 +8138,6 @@ mysql_prepare_alter_table(THD *thd, TABLE *table,
       continue;
     }
 
-    /*
-      If we are doing a rename of a column, update all references in virtual
-      column expressions, constraints and defaults to use the new column name
-    */
-    if (alter_info->flags & ALTER_RENAME_COLUMN)
-    {
-      if (field->vcol_info)
-        field->vcol_info->expr->walk(&Item::rename_fields_processor, 1,
-                                     &column_rename_param);
-      if (field->check_constraint)
-        field->check_constraint->expr->walk(&Item::rename_fields_processor, 1,
-                                            &column_rename_param);
-      if (field->default_value)
-        field->default_value->expr->walk(&Item::rename_fields_processor, 1,
-                                         &column_rename_param);
-      table->m_needs_reopen= 1; // because new column name is on thd->mem_root
-    }
-
     /* Check if field is changed */
     def_it.rewind();
     while ((def=def_it++))
@@ -8234,14 +8216,58 @@ mysql_prepare_alter_table(THD *thd, TABLE *table,
       }
       if (alter)
       {
-	if ((def->default_value= alter->default_value))
-          def->flags&= ~NO_DEFAULT_VALUE_FLAG;
+        if (alter->is_rename())
+        {
+          def->change.str= alter->name;
+          def->change.length= strlen(alter->name);
+          def->field_name.str= alter->new_name;
+          def->field_name.length= strlen(alter->new_name);
+          column_rename_param.fields.push_back(def);
+        }
         else
-          def->flags|= NO_DEFAULT_VALUE_FLAG;
+        {
+          if ((def->default_value= alter->default_value))
+            def->flags&= ~NO_DEFAULT_VALUE_FLAG;
+          else
+            def->flags|= NO_DEFAULT_VALUE_FLAG;
+        }
 	alter_it.remove();
       }
     }
   }
+
+  /*
+    If we are doing a rename of a column, update all references in virtual
+    column expressions, constraints and defaults to use the new column name
+  */
+  if (alter_info->flags & ALTER_RENAME_COLUMN)
+  {
+    alter_it.rewind();
+    Alter_column *alter;
+    while ((alter=alter_it++))
+    {
+      if (alter->is_rename())
+      {
+        my_error(ER_BAD_FIELD_ERROR, MYF(0), alter->name,
+                 table->s->table_name.str);
+        goto err;
+      }
+    }
+    for (f_ptr=table->field ; (field= *f_ptr) ; f_ptr++)
+    {
+      if (field->vcol_info)
+        field->vcol_info->expr->walk(&Item::rename_fields_processor, 1,
+                                    &column_rename_param);
+      if (field->check_constraint)
+        field->check_constraint->expr->walk(&Item::rename_fields_processor, 1,
+                                            &column_rename_param);
+      if (field->default_value)
+        field->default_value->expr->walk(&Item::rename_fields_processor, 1,
+                                        &column_rename_param);
+    }
+    table->m_needs_reopen= 1; // because new column name is on thd->mem_root
+  }
+
   dropped_sys_vers_fields &= VERS_SYSTEM_FIELD;
   if ((dropped_sys_vers_fields ||
        alter_info->flags & ALTER_DROP_PERIOD) &&

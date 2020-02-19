@@ -334,16 +334,24 @@ public:
 class Alter_column :public Sql_alloc {
 public:
   const char *name;
+  const char *new_name;
   Virtual_column_info *default_value;
   bool alter_if_exists;
   Alter_column(const char *par_name, Virtual_column_info *expr, bool par_exists)
-    :name(par_name), default_value(expr), alter_if_exists(par_exists) {}
+    :name(par_name), new_name(NULL), default_value(expr), alter_if_exists(par_exists) {}
+  Alter_column(const char *par_name, const char *_new_name)
+    :name(par_name), new_name(_new_name), default_value(NULL), alter_if_exists(false) {}
   /**
     Used to make a clone of this object for ALTER/CREATE TABLE
     @sa comment for Key_part_spec::clone
   */
   Alter_column *clone(MEM_ROOT *mem_root) const
     { return new (mem_root) Alter_column(*this); }
+  bool is_rename()
+  {
+    DBUG_ASSERT(!new_name || !default_value);
+    return new_name;
+  }
 };
 
 

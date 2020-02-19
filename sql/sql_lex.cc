@@ -524,6 +524,17 @@ bool LEX::add_alter_list(const char *name, Virtual_column_info *expr,
 }
 
 
+bool LEX::add_alter_list(const char *name, const char *new_name)
+{
+  Alter_column *ac= new (thd->mem_root) Alter_column(name, new_name);
+  if (unlikely(ac == NULL))
+    return true;
+  alter_info.alter_list.push_back(ac, thd->mem_root);
+  alter_info.flags|= ALTER_RENAME_COLUMN;
+  return false;
+}
+
+
 void LEX::init_last_field(Column_definition *field,
                           const LEX_CSTRING *field_name,
                           const CHARSET_INFO *cs)

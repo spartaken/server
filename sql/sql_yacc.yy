@@ -7619,10 +7619,10 @@ alter_list_item:
             Lex->alter_info.flags|= ALTER_ADD_CHECK_CONSTRAINT;
 	  }
         | ADD CONSTRAINT IF_SYM not EXISTS field_ident check_constraint
-         {
-           Lex->alter_info.flags|= ALTER_ADD_CHECK_CONSTRAINT;
-           Lex->add_constraint($6, $7, TRUE);
-         }
+          {
+            Lex->alter_info.flags|= ALTER_ADD_CHECK_CONSTRAINT;
+            Lex->add_constraint($6, $7, TRUE);
+          }
         | CHANGE opt_column opt_if_exists_table_element field_ident
           field_spec opt_place
           {
@@ -7727,6 +7727,11 @@ alter_list_item:
               my_yyabort_error((ER_WRONG_TABLE_NAME, MYF(0), $3->table.str));
             lex->name= $3->table;
             lex->alter_info.flags|= ALTER_RENAME;
+          }
+        | RENAME COLUMN_SYM ident TO_SYM ident
+          {
+            if (unlikely(Lex->add_alter_list($3.str, $5.str)))
+              MYSQL_YYABORT;
           }
         | CONVERT_SYM TO_SYM charset charset_name_or_default opt_collate
           {
