@@ -4887,7 +4887,7 @@ pfs_start_stage_v1(PSI_stage_key key, const char *src_file, int src_line)
 }
 
 PSI_stage_progress*
-pfs_get_current_stage_progress_v1()
+pfs_get_current_stage_progress_v1(void)
 {
   PFS_thread *pfs_thread= my_thread_get_THR_PFS();
   if (unlikely(pfs_thread == NULL))
