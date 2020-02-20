@@ -813,8 +813,8 @@ sp_head::init_sp_name(const sp_name *spname)
 void
 sp_head::init_psi_share()
 {
-  m_sp_share= MYSQL_GET_SP_SHARE(m_handler->type(), m_db.str, m_db.length,
-                                 m_name.str, m_name.length);
+  m_sp_share= MYSQL_GET_SP_SHARE(m_handler->type(), m_db.str, static_cast<uint>(m_db.length),
+                                 m_name.str, static_cast<uint>(m_name.length));
 }
 
 
@@ -3642,7 +3642,7 @@ sp_instr_stmt::execute(THD *thd, uint *nextp)
   DBUG_ENTER("sp_instr_stmt::execute");
   DBUG_PRINT("info", ("command: %d", m_lex_keeper.sql_command()));
 
-  MYSQL_SET_STATEMENT_TEXT(thd->m_statement_psi, m_query.str, m_query.length);
+  MYSQL_SET_STATEMENT_TEXT(thd->m_statement_psi, m_query.str, static_cast<uint>(m_query.length));
 
 #if defined(ENABLED_PROFILING)
   /* This s-p instr is profilable and will be captured. */

@@ -139,7 +139,7 @@ void table_replication_applier_configuration::make_row(Master_info *mi)
   mysql_mutex_lock(&mi->data_lock);
   mysql_mutex_lock(&mi->rli.data_lock);
 
-  m_row.channel_name_length= mi->connection_name.length;
+  m_row.channel_name_length= static_cast<uint>(mi->connection_name.length);
   memcpy(m_row.channel_name, mi->connection_name.str, m_row.channel_name_length);
   m_row.desired_delay= 0; //mi->rli->get_sql_delay();
 

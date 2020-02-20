@@ -14218,8 +14218,8 @@ bool acl_authenticate(THD *thd, uint com_change_user_pkt_len)
     my_ok(thd);
 
   PSI_CALL_set_thread_account
-    (thd->main_security_ctx.user, strlen(thd->main_security_ctx.user),
-    thd->main_security_ctx.host_or_ip, strlen(thd->main_security_ctx.host_or_ip));
+    (thd->main_security_ctx.user, static_cast<uint>(strlen(thd->main_security_ctx.user)),
+    thd->main_security_ctx.host_or_ip, static_cast<uint>(strlen(thd->main_security_ctx.host_or_ip)));
 
   /* Ready to handle queries */
   DBUG_RETURN(0);

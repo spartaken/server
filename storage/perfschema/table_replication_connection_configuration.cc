@@ -164,21 +164,21 @@ void table_replication_connection_configuration::make_row(Master_info *mi)
   mysql_mutex_lock(&mi->data_lock);
   mysql_mutex_lock(&mi->rli.data_lock);
 
-  m_row.channel_name_length= mi->connection_name.length;
+  m_row.channel_name_length= static_cast<uint>(mi->connection_name.length);
   memcpy(m_row.channel_name, mi->connection_name.str, m_row.channel_name_length);
 
-  m_row.host_length= strlen(mi->host);
+  m_row.host_length= static_cast<uint>(strlen(mi->host));
   memcpy(m_row.host, mi->host, m_row.host_length);
 
   m_row.port= (unsigned int) mi->port;
 
   /* can't the user be NULL? */
   temp_store= (char*)mi->user;
-  m_row.user_length= strlen(temp_store);
+  m_row.user_length= static_cast<uint>(strlen(temp_store));
   memcpy(m_row.user, temp_store, m_row.user_length);
 
   temp_store= const_cast<char*>(""); //(char*)mi->bind_addr;
-  m_row.network_interface_length= strlen(temp_store);
+  m_row.network_interface_length= static_cast<uint>(strlen(temp_store));
   memcpy(m_row.network_interface, temp_store, m_row.network_interface_length);
 
   if (mi->using_gtid)
@@ -193,23 +193,23 @@ void table_replication_connection_configuration::make_row(Master_info *mi)
 #endif
 
   temp_store= (char*)mi->ssl_ca;
-  m_row.ssl_ca_file_length= strlen(temp_store);
+  m_row.ssl_ca_file_length= static_cast<uint>(strlen(temp_store));
   memcpy(m_row.ssl_ca_file, temp_store, m_row.ssl_ca_file_length);
 
   temp_store= (char*)mi->ssl_capath;
-  m_row.ssl_ca_path_length= strlen(temp_store);
+  m_row.ssl_ca_path_length= static_cast<uint>(strlen(temp_store));
   memcpy(m_row.ssl_ca_path, temp_store, m_row.ssl_ca_path_length);
 
   temp_store= (char*)mi->ssl_cert;
-  m_row.ssl_certificate_length= strlen(temp_store);
+  m_row.ssl_certificate_length= static_cast<uint>(strlen(temp_store));
   memcpy(m_row.ssl_certificate, temp_store, m_row.ssl_certificate_length);
 
   temp_store= (char*)mi->ssl_cipher;
-  m_row.ssl_cipher_length= strlen(temp_store);
+  m_row.ssl_cipher_length= static_cast<uint>(strlen(temp_store));
   memcpy(m_row.ssl_cipher, temp_store, m_row.ssl_cipher_length);
 
   temp_store= (char*)mi->ssl_key;
-  m_row.ssl_key_length= strlen(temp_store);
+  m_row.ssl_key_length= static_cast<uint>(strlen(temp_store));
   memcpy(m_row.ssl_key, temp_store, m_row.ssl_key_length);
 
   if (mi->ssl_verify_server_cert)
@@ -218,11 +218,11 @@ void table_replication_connection_configuration::make_row(Master_info *mi)
     m_row.ssl_verify_server_certificate= PS_RPL_NO;
 
   temp_store= (char*)mi->ssl_crl;
-  m_row.ssl_crl_file_length= strlen(temp_store);
+  m_row.ssl_crl_file_length= static_cast<uint>(strlen(temp_store));
   memcpy(m_row.ssl_crl_file, temp_store, m_row.ssl_crl_file_length);
 
   temp_store= (char*)mi->ssl_crlpath;
-  m_row.ssl_crl_path_length= strlen(temp_store);
+  m_row.ssl_crl_path_length= static_cast<uint>(strlen(temp_store));
   memcpy(m_row.ssl_crl_path, temp_store, m_row.ssl_crl_path_length);
 
   m_row.connection_retry_interval= (unsigned int) mi->connect_retry;
@@ -232,7 +232,7 @@ void table_replication_connection_configuration::make_row(Master_info *mi)
   m_row.heartbeat_interval= (double)mi->heartbeat_period;
 
   temp_store= (char*)""; //mi->tls_version;
-  m_row.tls_version_length= strlen(temp_store);
+  m_row.tls_version_length= static_cast<uint>(strlen(temp_store));
   memcpy(m_row.tls_version, temp_store, m_row.tls_version_length);
 
   mysql_mutex_unlock(&mi->rli.data_lock);

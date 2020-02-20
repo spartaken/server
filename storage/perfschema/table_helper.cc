@@ -839,7 +839,7 @@ void PFS_variable_name_row::make_row(const char* str, size_t length)
   DBUG_ASSERT(length <= sizeof(m_str));
   DBUG_ASSERT(length <= NAME_CHAR_LEN);
 
-  m_length= MY_MIN(length, NAME_CHAR_LEN); /* enforce max name length */
+  m_length= MY_MIN(static_cast<uint>(length), NAME_CHAR_LEN); /* enforce max name length */
   if (m_length > 0)
     memcpy(m_str, str, length);
   m_str[m_length]= '\0';
@@ -863,7 +863,7 @@ void PFS_variable_value_row::make_row(const CHARSET_INFO *cs, const char* str, s
   {
     memcpy(m_str, str, length);
   }
-  m_length= length;
+  m_length= static_cast<uint>(length);
   m_charset= cs;
 }
 

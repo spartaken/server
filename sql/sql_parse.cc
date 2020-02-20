@@ -5623,8 +5623,8 @@ mysql_execute_command(THD *thd)
     DBUG_ASSERT(thd->in_sub_stmt == 0);
     sp->m_sql_mode= thd->variables.sql_mode;
     sp->m_sp_share= MYSQL_GET_SP_SHARE(sp->m_handler->type(),
-                                       sp->m_db.str, sp->m_db.length,
-                                       sp->m_name.str, sp->m_name.length);
+                                       sp->m_db.str, static_cast<uint>(sp->m_db.length),
+                                       sp->m_name.str, static_cast<uint>(sp->m_name.length));
     if (do_execute_sp(thd, lex->sphead))
       goto error;
     break;

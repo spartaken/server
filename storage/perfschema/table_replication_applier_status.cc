@@ -140,7 +140,7 @@ void table_replication_applier_status::make_row(Master_info *mi)
 
   DBUG_ASSERT(mi != NULL);
 
-  m_row.channel_name_length= mi->connection_name.length;
+  m_row.channel_name_length= static_cast<uint>(mi->connection_name.length);
   memcpy(m_row.channel_name, mi->connection_name.str, m_row.channel_name_length);
 
   //mysql_mutex_lock(&mi->rli->info_thd_lock);
