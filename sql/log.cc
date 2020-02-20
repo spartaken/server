@@ -10640,7 +10640,7 @@ bool MYSQL_BIN_LOG::recover_explicit_xa_prepare(const char *log_name,
       enum Log_event_type typ= ev->get_type_code();
       ev->thd= thd;
 
-      if (typ == FORMAT_DESCRIPTION_EVENT || typ == START_EVENT_V3)
+      if (typ == FORMAT_DESCRIPTION_EVENT)
         enable_apply_event= true;
 
       if (typ == GTID_EVENT)
@@ -10688,19 +10688,24 @@ bool MYSQL_BIN_LOG::recover_explicit_xa_prepare(const char *log_name,
           thd->variables.pseudo_slave_mode= TRUE;
           thd->transaction.xid_state.set_binlogged();
         }
-        // For XA_COMMIT and XA_ROLLBACK apply disable binlog temporarily.
+        // For XA_COMMIT and XA_ROLLBACK disable binlog temporarily.
         if (member && member->state == XA_COMPLETE && typ != GTID_EVENT)
         {
           thd_options= thd->variables.option_bits;
           thd->variables.option_bits&= ~OPTION_BIN_LOG;
           thd->variables.sql_log_bin_off= 1;
         }
+
         if ((err= ev->apply_event(rgi)))
           goto err2;
-        if (member && member->state == XA_COMPLETE && typ != GTID_EVENT)
+
+        // Cleanup on receiving end group events. Disable apply event flag.
+        if (thd->lex->sql_command == SQLCOM_XA_COMMIT ||
+            thd->lex->sql_command == SQLCOM_XA_ROLLBACK)
         {
           thd->variables.option_bits= thd_options;
           thd->variables.sql_log_bin_off= 0;
+          enable_apply_event= false;
           --recover_xa_count;
         }
         if (typ == XA_PREPARE_LOG_EVENT)
@@ -10714,7 +10719,7 @@ bool MYSQL_BIN_LOG::recover_explicit_xa_prepare(const char *log_name,
           enable_apply_event=false;
         }
       }
-      if (ev->get_type_code() != FORMAT_DESCRIPTION_EVENT)
+      if (typ != FORMAT_DESCRIPTION_EVENT)
         delete ev;
       ev= 0;
     }
