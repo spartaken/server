@@ -247,6 +247,7 @@ SORT_INFO *filesort(THD *thd, TABLE *table, Filesort *filesort,
     tracker->incr_pq_used();
     param.using_pq= true;
     const size_t compare_length= param.sort_length;
+    DBUG_ASSERT(param.using_packed_sortkeys() == false);
     /*
       For PQ queries (with limit) we know exactly how many pointers/records
       we have in the buffer, so to simplify things, we initialize
