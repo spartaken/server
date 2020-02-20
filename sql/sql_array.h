@@ -246,7 +246,7 @@ public:
 
   bool reserve(size_t new_size)
   {
-    return allocate_dynamic(&array, new_size);
+    return allocate_dynamic(&array, (uint)new_size);
   }
 
 
