@@ -1717,7 +1717,7 @@ ulong read_to_buffer(IO_CACHE *fromfile, Merge_chunk *buffpek,
 
     size_t num_bytes_read;
 
-    if (param->using_addon_fields() || param->using_packed_sortkeys())
+    if (param->using_packed_addons() || param->using_packed_sortkeys())
     {
         /*
           The last record read is most likely not complete here.
