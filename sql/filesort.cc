@@ -1735,6 +1735,8 @@ ulong read_to_buffer(IO_CACHE *fromfile, Merge_chunk *buffpek,
                              Sort_keys::read_sortkey_length(record) :
                              param->sort_length;
 
+          DBUG_ASSERT(sort_length <= param->sort_length);
+
           if (record + sort_length + size_of_addon_length >
               buffpek->buffer_end())
             break;                                // Incomplete record.
@@ -1744,6 +1746,7 @@ ulong read_to_buffer(IO_CACHE *fromfile, Merge_chunk *buffpek,
           if (plen + res_length > buffpek->buffer_end())
             break;                                // Incomplete record.
           DBUG_ASSERT(res_length > 0);
+          DBUG_ASSERT(sort_length + res_length <= param->rec_length);
           record+= sort_length;
           record+= res_length;
         }
