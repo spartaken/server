@@ -302,7 +302,7 @@ int table_events_waits_common::make_socket_object_columns(PFS_events_waits *wait
     size_t port_len= int10_to_str(port, (port_str+1), 10) - port_str + 1;
 
     /* OBJECT NAME */
-    m_row.m_object_name_length= ip_length + port_len;
+    m_row.m_object_name_length= ip_length + static_cast<uint>(port_len);
 
     if (unlikely((m_row.m_object_name_length == 0) ||
                  (m_row.m_object_name_length > sizeof(m_row.m_object_name))))

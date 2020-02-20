@@ -311,7 +311,7 @@ int table_uvar_by_thread
         {
           set_field_blob(f,
                          m_row.m_variable_value->get_value(),
-                         m_row.m_variable_value->get_value_length());
+              static_cast<uint>(m_row.m_variable_value->get_value_length()));
         }
         else
         {

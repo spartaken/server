@@ -6396,8 +6396,8 @@ pfs_create_prepared_stmt_v1(void *identity, uint stmt_id,
   PFS_prepared_stmt *pfs= create_prepared_stmt(identity,
                                                pfs_thread, pfs_program,
                                                pfs_stmt, stmt_id,
-                                               stmt_name, stmt_name_length,
-                                               sql_text, sql_text_length);
+                                               stmt_name, static_cast<uint>(stmt_name_length),
+                                               sql_text, static_cast<uint>(sql_text_length));
 
   state->m_parent_prepared_stmt= reinterpret_cast<PSI_prepared_stmt*>(pfs);
   state->m_in_prepare= true;

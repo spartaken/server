@@ -88,7 +88,7 @@ public:
       return NULL;
 
     monotonic= PFS_atomic::add_u32(& m_monotonic.m_u32, 1);
-    monotonic_max= monotonic + m_max;
+    monotonic_max= monotonic + static_cast<uint>(m_max);
 
     while (monotonic < monotonic_max)
     {
@@ -979,7 +979,7 @@ private:
 
       if (page == NULL)
       {
-        index= m_max;
+        index= static_cast<uint>(m_max);
         return NULL;
       }
 
@@ -991,7 +991,7 @@ private:
       {
         if (pfs->m_lock.is_populated())
         {
-          uint found= index_1 * PFS_PAGE_SIZE + (pfs - pfs_first);
+          uint found= index_1 * PFS_PAGE_SIZE + static_cast<uint>(pfs - pfs_first);
           *found_index= found;
           index= found + 1;
           return pfs;
@@ -1003,7 +1003,7 @@ private:
       index_2= 0;
     }
 
-    index= m_max;
+    index= static_cast<uint>(m_max);
     return NULL;
   }
 
