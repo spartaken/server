@@ -449,18 +449,6 @@ void
 fil_crypt_total_stat(
 	fil_crypt_stat_t *stat);
 
-/**
-Get scrub status for a space (used by information_schema)
-
-@param[in]	space		Tablespace
-@param[out]	status		Scrub status
-return 0 if data found */
-UNIV_INTERN
-void
-fil_space_get_scrub_status(
-	const fil_space_t*		space,
-	fil_space_scrub_status_t*	status);
-
 #include "fil0crypt.ic"
 #endif /* !UNIV_INNOCHECKSUM */
 

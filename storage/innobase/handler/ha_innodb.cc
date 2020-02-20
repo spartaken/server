@@ -213,11 +213,6 @@ static char*	innodb_version_str = (char*) INNODB_VERSION_STR;
 extern uint srv_fil_crypt_rotate_key_age;
 extern uint srv_n_fil_crypt_iops;
 
-extern my_bool srv_immediate_scrub_data_uncompressed;
-extern my_bool srv_background_scrub_data_uncompressed;
-extern my_bool srv_background_scrub_data_compressed;
-extern uint srv_background_scrub_data_interval;
-extern uint srv_background_scrub_data_check_interval;
 #ifdef UNIV_DEBUG
 my_bool innodb_evict_tables_on_commit_debug;
 extern my_bool srv_scrub_force_testing;
@@ -3435,9 +3430,9 @@ static const char* innodb_log_optimize_ddl_msg
 
 /** Deprecated parameter with no effect */
 static ulong innodb_undo_logs;
-/** Deprecation message for innodb_undo_logs */
+/** deprecation message for innodb_undo_logs */
 static const char* innodb_undo_logs_msg
-= "The parameter innodb_undo_logs is deprecated and has no effect.";
+= "the parameter innodb_undo_logs is deprecated and has no effect.";
 /** Deprecated parameter with no effect */
 static ulong innodb_buffer_pool_instances;
 /** Deprecated parameter with no effect */
@@ -3446,6 +3441,26 @@ static const char* innodb_page_cleaners_msg
 = "The parameter innodb_page_cleaners is deprecated and has no effect.";
 
 ulong srv_n_log_files;
+
+static my_bool innodb_background_scrub_data_uncompressed;
+
+static const char* innodb_background_scrub_data_uncompressed_msg
+= "The parameter innodb_background_scrub_data_uncompressed is deprecated and has no effect.";
+
+static my_bool innodb_background_scrub_data_compressed;
+
+static const char* innodb_background_scrub_data_compressed_msg
+= "The parameter innodb_background_scrub_data_compressed is deprecated and has no effect.";
+
+static uint innodb_background_scrub_data_check_interval;
+
+static const char* innodb_background_scrub_data_check_interval_msg
+= "The parameter innodb_background_scrub_data_check_interval is deprecated and has no effect.";
+
+static uint innodb_background_scrub_data_interval;
+
+static const char* innodb_background_scrub_data_interval_msg
+= "The parameter innodb_background_scrub_data_interval is deprecated and has no effect.";
 } // namespace deprecated
 
 /** Initialize, validate and normalize the InnoDB startup parameters.
@@ -18908,6 +18923,46 @@ innodb_undo_logs_warn(THD* thd, st_mysql_sys_var*, void*, const void*)
 			    deprecated::innodb_undo_logs_msg);
 }
 
+static void
+innodb_background_scrub_data_uncompressed_warn(THD* thd, st_mysql_sys_var*,
+					       void*, const void*)
+{
+	push_warning_printf(
+		thd, Sql_condition::WARN_LEVEL_WARN,
+		HA_ERR_UNSUPPORTED,
+		deprecated::innodb_background_scrub_data_uncompressed_msg);
+}
+
+static void
+innodb_background_scrub_data_compressed_warn(THD* thd, st_mysql_sys_var*,
+					     void*, const void*)
+{
+	push_warning_printf(
+		thd, Sql_condition::WARN_LEVEL_WARN,
+		HA_ERR_UNSUPPORTED,
+		deprecated::innodb_background_scrub_data_compressed_msg);
+}
+
+static void
+innodb_background_scrub_data_check_interval_warn(
+	THD* thd, st_mysql_sys_var*, void*, const void*)
+{
+	push_warning_printf(
+		thd, Sql_condition::WARN_LEVEL_WARN,
+		HA_ERR_UNSUPPORTED,
+		deprecated::innodb_background_scrub_data_check_interval_msg);
+}
+
+static void
+innodb_background_scrub_data_interval_warn(
+	THD* thd, st_mysql_sys_var*, void*, const void*)
+{
+	push_warning_printf(
+		thd, Sql_condition::WARN_LEVEL_WARN,
+		HA_ERR_UNSUPPORTED,
+		deprecated::innodb_background_scrub_data_interval_msg);
+}
+
 static SHOW_VAR innodb_status_variables_export[]= {
 	{"Innodb", (char*) &show_innodb_vars, SHOW_FUNC},
 	{NullS, NullS, SHOW_LONG}
@@ -20125,8 +20180,7 @@ static MYSQL_SYSVAR_ENUM(encrypt_tables, srv_encrypt_tables,
 
 static MYSQL_SYSVAR_UINT(encryption_threads, srv_n_fil_crypt_threads,
 			 PLUGIN_VAR_RQCMDARG,
-			 "Number of threads performing background key rotation and "
-			 "scrubbing",
+			 "Number of threads performing background key rotation ",
 			 NULL,
 			 innodb_encryption_threads_update,
 			 srv_n_fil_crypt_threads, 0, UINT_MAX32, 0);
@@ -20174,39 +20228,24 @@ static MYSQL_SYSVAR_BOOL(immediate_scrub_data_uncompressed,
 			 NULL, NULL, FALSE);
 
 static MYSQL_SYSVAR_BOOL(background_scrub_data_uncompressed,
-			 srv_background_scrub_data_uncompressed,
-			 0,
-			 "Enable scrubbing of uncompressed data by "
-			 "background threads (same as encryption_threads)",
-			 NULL, NULL, FALSE);
+  deprecated::innodb_background_scrub_data_uncompressed,
+  PLUGIN_VAR_OPCMDARG, innodb_deprecated_ignored, NULL,
+  innodb_background_scrub_data_uncompressed_warn, FALSE);
 
 static MYSQL_SYSVAR_BOOL(background_scrub_data_compressed,
-			 srv_background_scrub_data_compressed,
-			 0,
-			 "Enable scrubbing of compressed data by "
-			 "background threads (same as encryption_threads)",
-			 NULL, NULL, FALSE);
+  deprecated::innodb_background_scrub_data_compressed,
+  PLUGIN_VAR_OPCMDARG, innodb_deprecated_ignored, NULL,
+  innodb_background_scrub_data_compressed_warn, FALSE);
 
 static MYSQL_SYSVAR_UINT(background_scrub_data_check_interval,
-			 srv_background_scrub_data_check_interval,
-			 0,
-			 "check if spaces needs scrubbing every "
-			 "innodb_background_scrub_data_check_interval "
-			 "seconds",
-			 NULL, NULL,
-			 srv_background_scrub_data_check_interval,
-			 1,
-			 UINT_MAX32, 0);
+  deprecated::innodb_background_scrub_data_check_interval,
+  0, innodb_deprecated_ignored, NULL,
+  innodb_background_scrub_data_check_interval_warn, 0, 0, 0, 0);
 
 static MYSQL_SYSVAR_UINT(background_scrub_data_interval,
-			 srv_background_scrub_data_interval,
-			 0,
-			 "scrub spaces that were last scrubbed longer than "
-			 " innodb_background_scrub_data_interval seconds ago",
-			 NULL, NULL,
-			 srv_background_scrub_data_interval,
-			 1,
-			 UINT_MAX32, 0);
+  deprecated::innodb_background_scrub_data_interval,
+  0, innodb_deprecated_ignored, NULL,
+  innodb_background_scrub_data_interval_warn, 0, 0, 0, 0);
 
 #ifdef UNIV_DEBUG
 static MYSQL_SYSVAR_BOOL(debug_force_scrubbing,
@@ -20476,8 +20515,7 @@ i_s_innodb_sys_datafiles,
 i_s_innodb_sys_virtual,
 i_s_innodb_mutexes,
 i_s_innodb_sys_semaphore_waits,
-i_s_innodb_tablespaces_encryption,
-i_s_innodb_tablespaces_scrubbing
+i_s_innodb_tablespaces_encryption
 maria_declare_plugin_end;
 
 /** @brief Initialize the default value of innodb_commit_concurrency.

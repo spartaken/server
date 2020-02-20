@@ -457,6 +457,7 @@ extern ulong	srv_replication_delay;
 
 extern my_bool	innodb_encrypt_temporary_tables;
 
+extern my_bool  srv_immediate_scrub_data_uncompressed;
 /*-------------------------------------------*/
 
 /** Modes of operation */
