@@ -1754,7 +1754,7 @@ ulong read_to_buffer(IO_CACHE *fromfile, Merge_chunk *buffpek,
                             static_cast<ulonglong>(bytes_to_read)));
     }
     else
-        num_bytes_read= bytes_to_read;
+      num_bytes_read= bytes_to_read;
 
     buffpek->init_current_key();
     buffpek->advance_file_position(num_bytes_read);			/* New filepos */

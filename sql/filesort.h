@@ -35,8 +35,7 @@ class Sort_keys;
 enum sort_method_t
 {
   ORDER_BY_STRXFRM,
-  ORDER_BY_ORIGINAL,
-  ORDER_BY_ORIGINAL_TRUNCATION
+  ORDER_BY_ORIGINAL
 };
 
 /**
