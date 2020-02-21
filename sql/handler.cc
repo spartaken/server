@@ -1274,16 +1274,14 @@ int ha_prepare(THD *thd)
 {
   int error=0, all=1;
   THD_TRANS *trans=all ? &thd->transaction.all : &thd->transaction.stmt;
-  Ha_trx_info *ha_info= trans->ha_list, *ha_info_next;
+  Ha_trx_info *ha_info= trans->ha_list;
   DBUG_ENTER("ha_prepare");
 
   if (ha_info)
   {
-    for (; ha_info; ha_info= ha_info_next)
+    for (; ha_info; ha_info= ha_info->next())
     {
       handlerton *ht= ha_info->ht();
-      ha_info_next= ha_info->next();
-
       if (ht->prepare)
       {
         if (unlikely(prepare_or_error(ht, thd, all)))
@@ -1292,11 +1290,6 @@ int ha_prepare(THD *thd)
           error=1;
           break;
         }
-
-        DBUG_ASSERT(thd->transaction.xid_state.is_explicit_XA());
-
-        if (thd->variables.pseudo_slave_mode || thd->slave_thread)
-          ha_info->reset();
       }
       else
       {
@@ -1306,11 +1299,6 @@ int ha_prepare(THD *thd)
                             ha_resolve_storage_engine_name(ht));
 
       }
-    }
-    if (thd->variables.pseudo_slave_mode || thd->slave_thread)
-    {
-      trans->ha_list= 0;
-      trans->no_2pc=0;
     }
 
     DEBUG_SYNC(thd, "at_unlog_xa_prepare");
@@ -2166,7 +2154,7 @@ static my_bool xarecover_handlerton(THD *unused, plugin_ref plugin,
             char buf[XIDDATASIZE*4+6];
             _db_doprnt_("ignore xid %s", xid_to_str(buf, info->list+i));
             });
-          xid_cache_insert(info->list + i, opt_bin_log);
+          xid_cache_insert(info->list + i, true);
           info->found_foreign_xids++;
           continue;
         }

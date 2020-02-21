@@ -1699,11 +1699,11 @@ int binlog_init(void *p)
   {
     binlog_hton->prepare= binlog_prepare;
     binlog_hton->start_consistent_snapshot= binlog_start_consistent_snapshot;
+    binlog_hton->commit_by_xid= binlog_commit_by_xid;
+    binlog_hton->rollback_by_xid= binlog_rollback_by_xid;
+    // recover needs to be set to make xa{commit,rollback}_handlerton effective
+    binlog_hton->recover= binlog_xa_recover_dummy;
   }
-  // recover needs to be set to make xa{commit,rollback}_handlerton effective
-  binlog_hton->recover= binlog_xa_recover_dummy;
-  binlog_hton->commit_by_xid= binlog_commit_by_xid;
-  binlog_hton->rollback_by_xid= binlog_rollback_by_xid;
   binlog_hton->flags= HTON_NOT_USER_SELECTABLE | HTON_HIDDEN;
   return 0;
 }
